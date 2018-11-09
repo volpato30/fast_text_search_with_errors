@@ -1,0 +1,1 @@
+## A c++ implementation of the [Fast Text Searching With Errors](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.20.8854)
