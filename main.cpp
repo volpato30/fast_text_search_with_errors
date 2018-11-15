@@ -99,9 +99,9 @@ int main() {
     // testing
     test_hamming1_search();
     std::cout << "passed test!" << std::endl;
-    char identified_filename[] = "/home/rui/work/wild_type_match/I_to_L/protein_origin.cc.txt";
-    char output_filename[] = "/home/rui/work/wild_type_match/I_to_L/wildtype_matched.peptides.txt";
-    char denovo_filename[] = "/home/rui/work/wild_type_match/I_to_L/denovo.cc.txt";
+    char identified_filename[] = "/data/rqiao/wild_type_match/protein_origin.cc.txt";
+    char output_filename[] = "/data/rqiao/wild_type_match/wildtype_matched.peptides.txt";
+    char denovo_filename[] = "/data/rqiao/wild_type_match/SB_denovo.cc.txt";
 
     // read in identified peptides;
     auto identifiedPeptides = std::vector<std::vector<std::string>> ();
@@ -123,6 +123,7 @@ int main() {
     while (getline(denovo_file, denovo_peptides)) {
         futures.push_back(std::async(_process_one_line, denovo_peptides, identifiedPeptides, &outputFile));
     }
+    std::cout << futures.size() << " peptides read" << std::endl;
     for (auto &async_job : futures) {
         async_job.get();
     }
