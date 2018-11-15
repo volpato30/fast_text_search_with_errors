@@ -109,7 +109,7 @@ void parallel_match(std::vector<std::string>::iterator beg, std::vector<std::str
         return;
     }
     auto mid = beg + len / 2;
-    auto future = std::async(std::launch::async, parallel_match, mid, end, identifiedPeptides, outputFile, m);
+    auto future = std::async(std::launch::async, parallel_match, mid, end, identifiedPeptides, outputFile, std::ref(m));
     future.get();
 }
 
