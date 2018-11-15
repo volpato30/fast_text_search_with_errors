@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
-
+#include <mutex>
 #include <assert.h>
 #include "hamming1_search.h"
 #include "string_split.h"
@@ -81,10 +81,11 @@ std::string match(const std::vector<std::string> &pattern, const std::vector<std
 }
 
 void _process_one_line(std::string denovo_peptide, const std::vector<std::vector<std::string>> *identifiedPeptides,
-        std::ofstream *outputFile) {
+        std::ofstream *outputFile, std::mutex &m) {
     denovo_peptide.erase(std::remove(denovo_peptide.begin(), denovo_peptide.end(), '\n'), denovo_peptide.end());
     std::vector<std::string> pattern = split(denovo_peptide, ',');
     std::string line_string = match(pattern, *identifiedPeptides, I_to_L_map);
+    m.lock();
     if (!line_string.empty()) {
         std::cout << "write: " << line_string << std::endl;
         if (outputFile->is_open()) {
@@ -93,11 +94,13 @@ void _process_one_line(std::string denovo_peptide, const std::vector<std::vector
             std::cerr << "not writing!!" << std::endl;
         }
     }
+    m.unlock();
 }
 
 int main() {
     // testing
     test_hamming1_search();
+    std::mutex m;
     std::cout << "passed test!" << std::endl;
     char identified_filename[] = "/data/rqiao/wild_type_match/protein_origin.cc.txt";
     char output_filename[] = "/data/rqiao/wild_type_match/wildtype_matched.peptides.txt";
@@ -121,7 +124,8 @@ int main() {
     std::vector<std::future<void>> futures;
 
     while (getline(denovo_file, denovo_peptides)) {
-        futures.push_back(std::async(_process_one_line, denovo_peptides, &identifiedPeptides, &outputFile));
+        futures.push_back(std::async(std::launch::async, _process_one_line,
+                denovo_peptides, &identifiedPeptides, &outputFile, std::ref(m)));
     }
     std::cout << futures.size() << " peptides read" << std::endl;
     for (auto &async_job : futures) {
