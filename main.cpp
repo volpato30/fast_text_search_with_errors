@@ -96,7 +96,21 @@ void _process_one_line(std::string denovo_peptide, const std::vector<std::vector
         }
         m.unlock();
     }
+}
 
+void parallel_match(std::vector<std::string>::iterator beg, std::vector<std::string>::iterator end,
+        const std::vector<std::vector<std::string>> *identifiedPeptides, std::ofstream *outputFile, std::mutex &m) {
+    std::cout << "start a new thread\n";
+    auto len = end - beg;
+    if (len < 2000) {
+        for (auto iter=beg; iter<end; iter++) {
+            _process_one_line(*iter, identifiedPeptides, outputFile, std::ref(m));
+        }
+        return;
+    }
+    auto mid = beg + len / 2;
+    auto future = std::async(std::launch::async, parallel_match, mid, end, identifiedPeptides, outputFile, m);
+    future.get();
 }
 
 int main() {
@@ -119,6 +133,7 @@ int main() {
 
     std::ifstream denovo_file(denovo_filename);
     std::string denovo_peptides, line_string;
+    std::vector<std::string> denovo_peptide_list;
     std::vector<std::string> pattern;
 
     std::ofstream outputFile(output_filename);
@@ -126,13 +141,19 @@ int main() {
     std::vector<std::future<void>> futures;
 
     while (getline(denovo_file, denovo_peptides)) {
-        futures.push_back(std::async(std::launch::async, _process_one_line,
-                denovo_peptides, &identifiedPeptides, &outputFile, std::ref(m)));
+        denovo_peptide_list.push_back(denovo_peptides);
     }
-    std::cout << futures.size() << " peptides read" << std::endl;
-    for (auto &async_job : futures) {
-        async_job.get();
-    }
+
+    parallel_match(denovo_peptide_list.begin(), denovo_peptide_list.end(), &identifiedPeptides, &outputFile, std::ref(m));
+
+//    while (getline(denovo_file, denovo_peptides)) {
+//        futures.push_back(std::async(std::launch::async, _process_one_line,
+//                denovo_peptides, &identifiedPeptides, &outputFile, std::ref(m)));
+//    }
+//    std::cout << futures.size() << " peptides read" << std::endl;
+//    for (auto &async_job : futures) {
+//        async_job.get();
+//    }
     outputFile.close();
     denovo_file.close();
     return 0;
