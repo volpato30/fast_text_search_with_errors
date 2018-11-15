@@ -80,11 +80,11 @@ std::string match(const std::vector<std::string> &pattern, const std::vector<std
     return output_string;
 }
 
-void _process_one_line(std::string denovo_peptide, const std::vector<std::vector<std::string>> &identifiedPeptides,
+void _process_one_line(std::string denovo_peptide, const std::vector<std::vector<std::string>> *identifiedPeptides,
         std::ofstream *outputFile) {
     denovo_peptide.erase(std::remove(denovo_peptide.begin(), denovo_peptide.end(), '\n'), denovo_peptide.end());
     std::vector<std::string> pattern = split(denovo_peptide, ',');
-    std::string line_string = match(pattern, identifiedPeptides, I_to_L_map);
+    std::string line_string = match(pattern, *identifiedPeptides, I_to_L_map);
     if (!line_string.empty()) {
         std::cout << "write: " << line_string << std::endl;
         if (outputFile->is_open()) {
@@ -121,7 +121,7 @@ int main() {
     std::vector<std::future<void>> futures;
 
     while (getline(denovo_file, denovo_peptides)) {
-        futures.push_back(std::async(_process_one_line, denovo_peptides, identifiedPeptides, &outputFile));
+        futures.push_back(std::async(_process_one_line, denovo_peptides, &identifiedPeptides, &outputFile));
     }
     std::cout << futures.size() << " peptides read" << std::endl;
     for (auto &async_job : futures) {
