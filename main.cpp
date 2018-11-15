@@ -52,14 +52,15 @@ void readIdentifiedFile(const char * filename, std::vector<std::vector<std::stri
     file.close();
 }
 
-std::string match(const std::vector<std::string> &pattern, const std::vector<std::vector<std::string>> &identifiedPeptides) {
+std::string match(const std::vector<std::string> &pattern, const std::vector<std::vector<std::string>> &identifiedPeptides,
+                  const std::function<std::string(std::string)> &map_func=string_identity_map) {
     matchLocations ml;
     std::string output_string;
     unsigned long m = pattern.size();
     std::vector<std::string> wildTypePeptideVector = std::vector<std::string>();
 
     for (const std::vector<std::string> &wildTypePeptide : identifiedPeptides) {
-        ml = hamming1_search(pattern, wildTypePeptide);
+        ml = hamming1_search(pattern, wildTypePeptide, map_func);
         if (ml.exactMatch) {
             continue;
         } else if (ml.startIndex.empty()) {
@@ -82,9 +83,9 @@ int main() {
     // testing
     test_hamming1_search();
     std::cout << "passed test!" << std::endl;
-    char identified_filename[] = "/home/rui/CLionProjects/wild-type-match/identified_features.cc.txt";
-    char output_filename[] = "/home/rui/CLionProjects/wild-type-match/wildtype_matched.peptides.txt";
-    char denovo_filename[] = "/home/rui/CLionProjects/wild-type-match/denovo_peptides.cc.txt";
+    char identified_filename[] = "/home/rui/work/wild_type_match/I_to_L/protein_origin.cc.txt";
+    char output_filename[] = "/home/rui/work/wild_type_match/I_to_L/wildtype_matched.peptides.txt";
+    char denovo_filename[] = "/home/rui/work/wild_type_match/I_to_L/denovo.cc.txt";
 
     // read in identified peptides;
     auto identifiedPeptides = std::vector<std::vector<std::string>> ();
@@ -106,7 +107,7 @@ int main() {
     while (getline(denovo_file, denovo_peptides)) {
         // strip \n
         counter++;
-        if (counter % 1000 == 0) {
+        if (counter % 100 == 0) {
             std::cout << "processed " << counter << "peptides" << std::endl;
             t2 = std::chrono::high_resolution_clock::now();
             std::cout << "takes " << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count() << " seconds" << std::endl;
@@ -116,7 +117,7 @@ int main() {
         denovo_peptides.erase(std::remove(denovo_peptides.begin(), denovo_peptides.end(), '\n'), denovo_peptides.end());
         pattern.clear();
         pattern = split(denovo_peptides, ',');
-        line_string = match(pattern, identifiedPeptides);
+        line_string = match(pattern, identifiedPeptides, I_to_L_map);
         if (!line_string.empty()) {
             std::cout << "write: " << line_string << std::endl;
             if (outputFile.is_open()) {

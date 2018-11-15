@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <functional>
 #include <map>
 
 struct matchLocations {
@@ -15,8 +16,20 @@ struct matchLocations {
     std::vector<unsigned long> startIndex;
 };
 
+std::string string_identity_map(const std::string &c) {
+    return c;
+}
 
-matchLocations hamming1_search(const std::vector<std::string> &pattern, const std::vector<std::string> &text) {
+std::string I_to_L_map(const std::string &c) {
+    if ( c == "I") {
+        return "L";
+    } else {
+        return c;
+    }
+}
+
+matchLocations hamming1_search(const std::vector<std::string> &pattern, const std::vector<std::string> &text,
+                               const std::function<std::string(std::string)> &map_func=string_identity_map) {
     // if there is an exact match, stop search
     unsigned long m = pattern.size();
     int R0=0, R1=0, S=0, shR0;
@@ -33,21 +46,24 @@ matchLocations hamming1_search(const std::vector<std::string> &pattern, const st
     std::map<std::string, int> sMap;
     int index = 0;
     // initialize sMap
+    std::string mapped_c;
     for (const std::string &c : pattern) {
-        if (sMap.find(c) == sMap.end()) {
-            sMap.insert(std::make_pair(c, 1 << index));
+        mapped_c = map_func(c);
+        if (sMap.find(mapped_c) == sMap.end()) {
+            sMap.insert(std::make_pair(mapped_c, 1 << index));
         } else {
-            sMap[c] |= 1 << index;
+            sMap[mapped_c] |= 1 << index;
         }
         index++;
     }
 
     index = 0;
     for (const std::string &c : text) {
-        if (sMap.find(c) == sMap.end()) {
+        mapped_c = map_func(c);
+        if (sMap.find(mapped_c) == sMap.end()) {
             S = 0;
         } else {
-            S = sMap[c];
+            S = sMap[mapped_c];
         }
         shR0 = (R0 << 1) | 1;
         R0 = shR0 & S;
