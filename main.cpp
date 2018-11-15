@@ -2,6 +2,7 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
+#include <future>
 
 #include <assert.h>
 #include "hamming1_search.h"
@@ -79,6 +80,21 @@ std::string match(const std::vector<std::string> &pattern, const std::vector<std
     return output_string;
 }
 
+void _process_one_line(std::string denovo_peptide, const std::vector<std::vector<std::string>> &identifiedPeptides,
+        std::ofstream *outputFile) {
+    denovo_peptide.erase(std::remove(denovo_peptide.begin(), denovo_peptide.end(), '\n'), denovo_peptide.end());
+    std::vector<std::string> pattern = split(denovo_peptide, ',');
+    std::string line_string = match(pattern, identifiedPeptides, I_to_L_map);
+    if (!line_string.empty()) {
+        std::cout << "write: " << line_string << std::endl;
+        if (outputFile->is_open()) {
+            *outputFile << line_string;
+        } else {
+            std::cerr << "not writing!!" << std::endl;
+        }
+    }
+}
+
 int main() {
     // testing
     test_hamming1_search();
@@ -95,38 +111,20 @@ int main() {
     std::cout << identifiedPeptides[1].size() << std::endl;
 
     // match wild-type and write to output
-    int counter = 0;
 
     std::ifstream denovo_file(denovo_filename);
     std::string denovo_peptides, line_string;
     std::vector<std::string> pattern;
 
     std::ofstream outputFile(output_filename);
-    auto t1 = std::chrono::high_resolution_clock::now();
-    auto t2 = t1;
-    while (getline(denovo_file, denovo_peptides)) {
-        // strip \n
-        counter++;
-        if (counter % 100 == 0) {
-            std::cout << "processed " << counter << "peptides" << std::endl;
-            t2 = std::chrono::high_resolution_clock::now();
-            std::cout << "takes " << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count() << " seconds" << std::endl;
-            t1 = t2;
-        }
 
-        denovo_peptides.erase(std::remove(denovo_peptides.begin(), denovo_peptides.end(), '\n'), denovo_peptides.end());
-        pattern.clear();
-        pattern = split(denovo_peptides, ',');
-        line_string = match(pattern, identifiedPeptides, I_to_L_map);
-        if (!line_string.empty()) {
-            std::cout << "write: " << line_string << std::endl;
-            if (outputFile.is_open()) {
-                outputFile << line_string;
-                outputFile.flush();
-            } else {
-                std::cerr << "not writing!!" << std::endl;
-            }
-        }
+    std::vector<std::future<void>> futures;
+
+    while (getline(denovo_file, denovo_peptides)) {
+        futures.push_back(std::async(_process_one_line, denovo_peptides, identifiedPeptides, &outputFile));
+    }
+    for (auto &async_job : futures) {
+        async_job.get();
     }
     outputFile.close();
     denovo_file.close();
