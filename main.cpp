@@ -85,16 +85,18 @@ void _process_one_line(std::string denovo_peptide, const std::vector<std::vector
     denovo_peptide.erase(std::remove(denovo_peptide.begin(), denovo_peptide.end(), '\n'), denovo_peptide.end());
     std::vector<std::string> pattern = split(denovo_peptide, ',');
     std::string line_string = match(pattern, *identifiedPeptides, I_to_L_map);
-    m.lock();
+
     if (!line_string.empty()) {
         std::cout << "write: " << line_string << std::endl;
+        m.lock();
         if (outputFile->is_open()) {
             *outputFile << line_string;
         } else {
             std::cerr << "not writing!!" << std::endl;
         }
+        m.unlock();
     }
-    m.unlock();
+
 }
 
 int main() {
