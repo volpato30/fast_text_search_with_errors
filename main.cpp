@@ -91,6 +91,7 @@ void _process_one_line(std::string denovo_peptide, const std::vector<std::vector
         m.lock();
         if (outputFile->is_open()) {
             *outputFile << line_string;
+            outputFile->flush();
         } else {
             std::cerr << "not writing!!" << std::endl;
         }
@@ -110,6 +111,7 @@ void parallel_match(std::vector<std::string>::iterator beg, std::vector<std::str
     }
     auto mid = beg + len / 2;
     auto future = std::async(std::launch::async, parallel_match, mid, end, identifiedPeptides, outputFile, std::ref(m));
+    parallel_match(beg, mid, identifiedPeptides, outputFile, std::ref(m));
     future.get();
 }
 
